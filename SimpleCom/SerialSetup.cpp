@@ -1,7 +1,7 @@
-#include <Windows.h>
-#include <tchar.h>
+#include "stdafx.h"
 
 #include "SerialSetup.h"
+
 #include "WinAPIException.h"
 #include "resource.h"
 

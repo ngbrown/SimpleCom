@@ -1,5 +1,6 @@
-#include "WinAPIException.h"
+#include "stdafx.h"
 
+#include "WinAPIException.h"
 
 
 WinAPIException::WinAPIException(DWORD error_code, LPCTSTR error_caption) : _error_code(error_code),

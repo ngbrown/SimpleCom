@@ -1,8 +1,6 @@
 #pragma once
 
-#include <Windows.h>
-#include <tchar.h>
-
+#include "stdafx.h"
 
 /*
  * Exception class for Windows API error.

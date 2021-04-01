@@ -1,6 +1,6 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿#include "stdafx.h"
 
-#include <Windows.h>
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <iostream>
 

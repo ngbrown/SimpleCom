@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Windows.h>
+#include "stdafx.h"
 
 /*
  * Base class for enum value.
