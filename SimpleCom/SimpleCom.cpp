@@ -3,6 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <iostream>
+#include <vector>
 
 #include "SerialSetup.h"
 #include "WinAPIException.h"
@@ -65,13 +66,15 @@ static void StdInRedirector(HWND parent_hwnd) {
 	CloseHandle(overlapped.hEvent);
 }
 
+#define READ_BUF_SIZE 4096
+
 /*
  * Entry point for stdout redirector.
  * stdout redirects serial (read op) to stdout.
  */
 DWORD WINAPI StdOutRedirector(_In_ LPVOID lpParameter) {
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-	char buf;
+	std::vector<char> buf(READ_BUF_SIZE, 0x00);
 	DWORD nBytesRead;
 
 	while (!terminated) {
@@ -80,7 +83,7 @@ DWORD WINAPI StdOutRedirector(_In_ LPVOID lpParameter) {
 			OutputDebugString(_T("ResetEvent failed.\r\n"));
 		}
 
-		if (!ReadFile(hSerial, &buf, 1, &nBytesRead, &serialReadOverlapped)) {
+		if (!ReadFile(hSerial, buf.data(), buf.size(), &nBytesRead, &serialReadOverlapped)) {
 			if (GetLastError() == ERROR_IO_PENDING) {
 				if (!GetOverlappedResult(hSerial, &serialReadOverlapped, &nBytesRead, TRUE)) {
 					OutputDebugString(_T("StdOutRedirector: GetOverlappedResult failed.\r\n"));
@@ -95,7 +98,7 @@ DWORD WINAPI StdOutRedirector(_In_ LPVOID lpParameter) {
 
 		if (nBytesRead > 0) {
 			DWORD nBytesWritten;
-			WriteFile(hStdOut, &buf, nBytesRead, &nBytesWritten, NULL);
+			WriteFile(hStdOut, buf.data(), nBytesRead, &nBytesWritten, NULL);
 		}
 
 	}
@@ -174,7 +177,7 @@ int main()
 		DWORD last_error = GetLastError();
 		OutputDebugString(_T("SetCommMask failed.\r\n"));
 	}
-	if (!SetupComm(hSerial, 256, 256))
+	if (!SetupComm(hSerial, READ_BUF_SIZE, 256))
 	{
 		DWORD last_error = GetLastError();
 		OutputDebugString(_T("SetupComm failed.\r\n"));
