@@ -10,7 +10,7 @@
 static HANDLE stdoutRedirectorThread;
 
 static HANDLE hSerial;
-static OVERLAPPED serialReadOverlapped = { 0 };
+static OVERLAPPED serialReadOverlapped = { 0, 0, 0, 0, nullptr };
 static volatile bool terminated;
 
 
@@ -75,12 +75,21 @@ DWORD WINAPI StdOutRedirector(_In_ LPVOID lpParameter) {
 	DWORD nBytesRead;
 
 	while (!terminated) {
-		ResetEvent(serialReadOverlapped.hEvent);
+		if (!ResetEvent(serialReadOverlapped.hEvent))
+		{
+			OutputDebugString(_T("ResetEvent failed.\r\n"));
+		}
+
 		if (!ReadFile(hSerial, &buf, 1, &nBytesRead, &serialReadOverlapped)) {
 			if (GetLastError() == ERROR_IO_PENDING) {
 				if (!GetOverlappedResult(hSerial, &serialReadOverlapped, &nBytesRead, TRUE)) {
+					OutputDebugString(_T("StdOutRedirector: GetOverlappedResult failed.\r\n"));
 					break;
 				}
+			}
+			else
+			{
+				OutputDebugString(_T("StdOutRedirector: Some error reading the serial port.\r\n"));
 			}
 		}
 
@@ -150,21 +159,52 @@ int main()
 	TString title = _T("SimpleCom: ") + device;
 	SetConsoleTitle(title.c_str());
 
-	SetCommState(hSerial, &dcb);
-	PurgeComm(hSerial, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
-	SetCommMask(hSerial, EV_RXCHAR);
-	SetupComm(hSerial, 1, 1);
+	if (!SetCommState(hSerial, &dcb))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("ResetEvent failed.\r\n"));
+	}
+	if (!PurgeComm(hSerial, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("PurgeComm failed.\r\n"));
+	}
+	if (!SetCommMask(hSerial, EV_RXCHAR))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("SetCommMask failed.\r\n"));
+	}
+	if (!SetupComm(hSerial, 256, 256))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("SetupComm failed.\r\n"));
+	}
 
 	COMMTIMEOUTS comm_timeouts;
-	GetCommTimeouts(hSerial, &comm_timeouts);
+	if (!GetCommTimeouts(hSerial, &comm_timeouts))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("GetCommTimeouts failed.\r\n"));
+	}
+
 	comm_timeouts.ReadIntervalTimeout = 1;
 	comm_timeouts.ReadTotalTimeoutMultiplier = 0;
 	comm_timeouts.ReadTotalTimeoutConstant = 10;
 	comm_timeouts.WriteTotalTimeoutMultiplier = 0;
 	comm_timeouts.WriteTotalTimeoutConstant = 0;
-	SetCommTimeouts(hSerial, &comm_timeouts);
+	
+	if (!SetCommTimeouts(hSerial, &comm_timeouts))
+	{
+		DWORD last_error = GetLastError();
+		OutputDebugString(_T("SetCommTimeouts failed.\r\n"));
+	}
 
 	serialReadOverlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	serialReadOverlapped.Internal = 0;
+	serialReadOverlapped.InternalHigh = 0;
+	serialReadOverlapped.Offset = 0;
+	serialReadOverlapped.OffsetHigh = 0;
+	
 	if (serialReadOverlapped.hEvent == NULL) {
 		WinAPIException ex(GetLastError(), _T("SimpleCom"));
 		MessageBox(parent_hwnd, ex.GetErrorText(), ex.GetErrorCaption(), MB_OK | MB_ICONERROR);
